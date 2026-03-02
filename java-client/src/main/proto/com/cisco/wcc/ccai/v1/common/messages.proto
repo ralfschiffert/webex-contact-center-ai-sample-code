@@ -1,0 +1,29 @@
+/*
+ This proto file contains message types for the AI Insight service
+*/
+syntax = "proto3";
+
+package com.cisco.wcc.ccai.v1;
+
+/*
+ Represents a message in the conversation
+*/
+message Message {
+    string id = 1;                    // Unique message identifier
+    string content = 2;               // Message content/text
+    string sender_id = 3;             // ID of the message sender
+    string sender_name = 4;           // Name of the message sender
+    int64 timestamp = 5;              // Unix timestamp when message was sent
+    MessageType type = 6;             // Type of message
+    map<string, string> metadata = 7; // Additional metadata
+}
+
+/*
+ Message types enum
+*/
+enum MessageType {
+    MESSAGE_TYPE_UNSPECIFIED = 0;
+    TEXT = 1;
+    ATTACHMENT = 2;
+    SYSTEM = 3;
+}

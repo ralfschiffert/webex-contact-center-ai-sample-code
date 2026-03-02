@@ -1,0 +1,41 @@
+/*
+ This proto file contains virtual agent and NLU related types
+*/
+syntax = "proto3";
+
+package com.cisco.wcc.ccai.v1;
+
+/*
+ Represents Natural Language Understanding result from virtual agent
+*/
+message NLU {
+    string intent = 1;                    // Detected intent
+    float confidence = 2;                 // Confidence score for the intent
+    repeated Entity entities = 3;         // Extracted entities
+    string query_text = 4;               // Original query text
+    string language_code = 5;            // Language code of the query
+    map<string, string> parameters = 6;   // Extracted parameters
+    bool all_required_params_present = 7; // Whether all required params are present
+    string fulfillment_text = 8;         // Response text from the agent
+}
+
+/*
+ Represents an entity extracted from the user input
+*/
+message Entity {
+    string type = 1;           // Entity type (e.g., "date", "location")
+    string value = 2;          // Entity value
+    float confidence = 3;      // Confidence score
+    int32 start_offset = 4;    // Start position in original text
+    int32 end_offset = 5;      // End position in original text
+}
+
+/*
+ Virtual Agent response types
+*/
+enum VirtualAgentResponseType {
+    RESPONSE_TYPE_UNSPECIFIED = 0;
+    INTENT_DETECTION = 1;
+    ENTITY_EXTRACTION = 2;
+    FULFILLMENT = 3;
+}

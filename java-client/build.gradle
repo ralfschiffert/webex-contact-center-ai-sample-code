@@ -1,0 +1,138 @@
+plugins {
+    id 'java'
+    id 'com.google.protobuf' version '0.9.4'
+    id 'application'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.cisco.wcc.ccai'
+version = '1.0.0'
+java.sourceCompatibility = JavaVersion.VERSION_17
+java.targetCompatibility = JavaVersion.VERSION_17
+
+
+wrapper {
+    gradleVersion = '8.4'
+    distributionUrl = "https://services.gradle.org/distributions/gradle-8.4-bin.zip"
+}
+
+
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    grpcVersion = '1.58.0'
+    protobufVersion = '3.24.4'
+    protocVersion = protobufVersion
+}
+
+dependencies {
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "io.grpc:grpc-services:${grpcVersion}"
+    implementation "io.grpc:grpc-core:${grpcVersion}"
+    compileOnly "org.apache.tomcat:annotations-api:6.0.53"
+    
+    // Logging
+    implementation 'org.slf4j:slf4j-api:2.0.9'
+    implementation 'ch.qos.logback:logback-classic:1.4.14'
+    
+    // JSON processing
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    
+    // Testing
+    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.1'
+    testImplementation 'org.mockito:mockito-core:5.8.0'
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protocVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+// Inform IDEs like IntelliJ IDEA, Eclipse or NetBeans about the generated code.
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+        proto {
+            srcDir 'src/main/proto'
+        }
+        resources {
+            srcDirs 'src/main/resources'
+            exclude 'src/main/proto/**'
+        }
+    }
+}
+
+application {
+    mainClass = 'com.cisco.wcc.ccai.client.StreamingInsightClientMain'
+}
+
+// Configure Shadow JAR for proper service file merging
+shadowJar {
+    archiveClassifier.set('')
+    manifest {
+        attributes(
+            'Main-Class': 'com.cisco.wcc.ccai.client.StreamingInsightClientMain'
+        )
+    }
+    // Properly merge service provider files for gRPC
+    mergeServiceFiles()
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
+// Make build task depend on shadowJar instead of jar
+build.dependsOn shadowJar
+jar.enabled = false
+
+// Fix task dependencies for application plugin
+distZip.dependsOn shadowJar
+distTar.dependsOn shadowJar
+startScripts.dependsOn shadowJar
+
+task runClient(type: JavaExec) {
+    dependsOn classes
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.cisco.wcc.ccai.client.StreamingInsightClientMain'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Task to copy proto files to build directory for easier access
+task copyProtos(type: Copy) {
+    from '../protobuf'
+    into 'src/main/proto'
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// Make sure proto files are copied before generation and compilation
+generateProto.dependsOn copyProtos
+compileJava.dependsOn copyProtos
+
+// Configure processResources to handle duplicates
+processResources {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    dependsOn copyProtos
+}

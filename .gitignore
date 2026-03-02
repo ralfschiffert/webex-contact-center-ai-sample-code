@@ -1,0 +1,56 @@
+# Java / Gradle
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.gradle/
+build/
+bin/
+out/
+target/
+
+# Gradle wrapper (keep gradlew but ignore gradle binaries)
+gradle.zip
+.gradle/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Generated sources
+java-client/build/generated/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
+
+# Node modules (for JavaScript client)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Test outputs
+test-output/
