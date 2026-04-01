@@ -841,7 +841,7 @@ Before running the client, collect:
 1. **Server Host:** Your data center endpoint
    - Example: `serving-api-streaming.wxcc-us1.cisco.com`
 2. **Server Port:** `443` (for TLS connections)
-3. **Access Token:** Your machine account bearer token
+3. **Access Token:** Your agent access token
 4. **Organization ID:** Your Control Hub org UUID
 5. **Conversation ID:** A conversation you want to monitor
 6. **Agent ID:** Your agent identifier
@@ -1138,7 +1138,7 @@ StreamingInsightClientConfig config = StreamingInsightClientConfig.newBuilder()
 
 **Important Configuration Options:**
 - **setUseTls(true):** Always use TLS in production
-- **setAccessToken():** Your machine account bearer token
+- **setAccessToken():** Your agent access token
 - **setMaxInboundMessageSize():** Adjust based on expected insight size
 - **Keep-alive settings:** Tune for your network conditions
 
@@ -1632,7 +1632,7 @@ nslookup serving-api-streaming.wxcc-us1.cisco.com
 1. Verify token is valid and not expired
 2. Check token includes required scopes: `cjp-ccai:read,cjp:organization`
 3. Ensure org ID matches the organization for which token was generated
-4. Verify machine account has proper permissions in Control Hub
+4. Verify agent has proper permissions and access to the conversation
 
 **Debug Authentication:**
 ```java
