@@ -846,15 +846,26 @@ Before running the client, collect:
 5. **Conversation ID:** A conversation you want to monitor
 6. **Agent ID:** Your agent identifier
 
-### Step 5: Run the Interactive CLI
+### Step 5: Run the Client with Parameters
+
+The client requires server host, port, and access token to be passed as command-line arguments:
 
 ```bash
-# Run with interactive menu
-gradle run
+# Using Gradle (recommended for development)
+gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
 
 # Or run the JAR directly
-java -jar build/libs/java-client-1.0.0.jar
+java -jar build/libs/java-client-1.0.0.jar \
+  serving-api-streaming.wxcc-us1.cisco.com \
+  443 \
+  YOUR_ACCESS_TOKEN
 ```
+
+**Replace:**
+- `serving-api-streaming.wxcc-us1.cisco.com` with your data center endpoint
+- `YOUR_ACCESS_TOKEN` with your actual agent access token
+
+**Note:** Running `gradle run` without arguments will fail because the client cannot read interactive input when run via Gradle. Always pass the required arguments as shown above.
 
 **Interactive Menu:**
 ```
@@ -911,21 +922,6 @@ Role: AGENT
 Insight Type: AGENT_ANSWERS
 Timestamp: 2026-03-02T12:35:02Z
 Suggestion: Check knowledge base article KB-1234 for account issues
-```
-
-### Step 7: Test with Command-Line Arguments
-
-For automation or testing, pass parameters directly:
-
-```bash
-# Run with all parameters
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
-
-# Or with the JAR
-java -jar build/libs/java-client-1.0.0.jar \
-  serving-api-streaming.wxcc-us1.cisco.com \
-  443 \
-  YOUR_ACCESS_TOKEN
 ```
 
 ---
@@ -1786,6 +1782,50 @@ export PATH=$JAVA_HOME/bin:$PATH
 Then reload:
 ```bash
 source ~/.zshrc  # or source ~/.bash_profile
+```
+
+### Interactive Mode Issues
+
+**Problem:** `NoSuchElementException: No line found` or `gradle run` fails with interactive menu
+
+This error occurs when running the client via Gradle without command-line arguments. The interactive menu cannot read from stdin when launched through Gradle.
+
+**Solution:**
+
+Always pass command-line arguments when using `gradle run`:
+
+```bash
+# Correct - pass arguments
+gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
+
+# Wrong - will fail with NoSuchElementException
+gradle run
+```
+
+**Alternative:** Run the JAR directly for interactive mode:
+
+```bash
+# Build first
+gradle build
+
+# Run JAR directly (supports interactive input)
+java -jar build/libs/java-client-1.0.0.jar \
+  serving-api-streaming.wxcc-us1.cisco.com \
+  443 \
+  YOUR_ACCESS_TOKEN
+```
+
+**Problem:** Token shows as `null` in output
+
+This means you didn't pass the access token as a command-line argument.
+
+**Solution:**
+```bash
+# Make sure to include all three required arguments:
+# 1. Server host
+# 2. Port
+# 3. Access token
+gradle run --args="YOUR_SERVER 443 YOUR_TOKEN"
 ```
 
 ---
