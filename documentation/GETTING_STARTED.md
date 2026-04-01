@@ -814,18 +814,25 @@ java-client/
 
 ### Step 3: Build the Client
 
+**Important:** Ensure `JAVA_HOME` is set to Java 17 before building (see Prerequisites section).
+
 ```bash
+# Verify Java version
+java -version  # Should show Java 17
+
 # Build the project (generates protobuf classes and compiles)
-./gradlew build
+gradle clean build
 
 # Expected output:
-# BUILD SUCCESSFUL in 5s
+# BUILD SUCCESSFUL in 5-10s
 ```
 
 **What happens during build:**
 1. Protocol Buffer files are compiled to Java classes
 2. Dependencies are downloaded
 3. JAR files are created in `build/libs/`
+
+**Note:** If you encounter build errors related to Java version, see the [Troubleshooting](#troubleshooting) section.
 
 ### Step 4: Gather Required Information
 
@@ -843,7 +850,7 @@ Before running the client, collect:
 
 ```bash
 # Run with interactive menu
-./gradlew run
+gradle run
 
 # Or run the JAR directly
 java -jar build/libs/java-client-1.0.0.jar
@@ -912,7 +919,7 @@ For automation or testing, pass parameters directly:
 
 ```bash
 # Run with all parameters
-./gradlew run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
+gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
 
 # Or with the JAR
 java -jar build/libs/java-client-1.0.0.jar \
@@ -1088,7 +1095,7 @@ The provided Java client is production-ready and can be used as-is or extended:
 # Clone and build
 git clone <your-repo>
 cd serving-api/java-client
-./gradlew build
+gradle build
 ```
 
 #### Option B: Build from Scratch
@@ -1711,19 +1718,74 @@ if (duration > 100) {
 
 ### Java Version Issues
 
-**Problem:** Build or runtime errors related to Java version
+**Problem 1: Build fails with "Unsupported class file major version 69"**
+
+This error means your system Gradle was compiled with a newer Java version (e.g., Java 25) but you're trying to run it with an older Java version.
 
 **Solution:**
 ```bash
-# Verify Java version
+# Check available Java versions
+/usr/libexec/java_home -V
+
+# Set JAVA_HOME to Java 17
+export JAVA_HOME=/Users/YOUR_USERNAME/Library/Java/JavaVirtualMachines/ms-17.0.17/Contents/Home
+export PATH=$JAVA_HOME/bin:$PATH
+
+# Verify it's set correctly
+echo $JAVA_HOME
+java -version  # Should show Java 17
+
+# Build with the correct Java version
+gradle clean build
+```
+
+**Problem 2: JAVA_HOME points to invalid directory**
+
+If you see: `ERROR: JAVA_HOME is set to an invalid directory`
+
+**Solution:**
+```bash
+# Find your Java 17 installation
+/usr/libexec/java_home -V | grep "17\."
+
+# Update your ~/.zshrc (or ~/.bash_profile) with the correct path
+echo 'export JAVA_HOME=/Users/YOUR_USERNAME/Library/Java/JavaVirtualMachines/ms-17.0.17/Contents/Home' >> ~/.zshrc
+echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.zshrc
+
+# Reload your shell configuration
+source ~/.zshrc
+
+# Verify
 java -version
-# Should show Java 17 or higher
+gradle clean build
+```
 
-# Set JAVA_HOME if needed
-export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+**Problem 3: Gradle wrapper fails with "NoClassDefFoundError"**
 
-# Rebuild
-./gradlew clean build
+If `./gradlew` fails with wrapper errors, use system Gradle instead:
+
+**Solution:**
+```bash
+# Install Gradle via Homebrew if not already installed
+brew install gradle
+
+# Use 'gradle' instead of './gradlew'
+gradle clean build
+```
+
+**Making JAVA_HOME Permanent:**
+
+Add these lines to your `~/.zshrc` (macOS/Linux with zsh) or `~/.bash_profile` (bash):
+
+```bash
+# Set Java 17 as default
+export JAVA_HOME=/Users/YOUR_USERNAME/Library/Java/JavaVirtualMachines/ms-17.0.17/Contents/Home
+export PATH=$JAVA_HOME/bin:$PATH
+```
+
+Then reload:
+```bash
+source ~/.zshrc  # or source ~/.bash_profile
 ```
 
 ---
