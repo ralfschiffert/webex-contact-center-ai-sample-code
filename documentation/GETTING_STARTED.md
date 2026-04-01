@@ -784,10 +784,10 @@ The **Streaming Insight Java Client** is a production-ready gRPC client that:
 
 ```bash
 # Clone the repository
-git clone <your-serving-api-repo>
+git clone -b enhanced-serving-api https://github.com/ralfschiffert/webex-contact-center-ai-sample-code.git
 
 # Navigate to the Java client directory
-cd serving-api/java-client
+cd webex-contact-center-ai-sample-code/java-client
 ```
 
 ### Step 2: Understand the Project Structure
