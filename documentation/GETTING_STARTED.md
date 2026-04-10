@@ -928,21 +928,18 @@ Before running the client, collect:
 5. **Conversation ID:** A conversation you want to monitor
 6. **Agent ID:** Your agent identifier
 
-### Step 5: Run the Client with Parameters
+### Step 5: Run the Client
 
 The client accepts command-line arguments in this order: **server host, port, access token, organization ID (optional)**
 
 ```bash
-# Using Gradle (recommended for development)
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN"
-
-# Using a shell variable for the token
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 ${token}"
+# Run the JAR with required arguments
+java -jar build/libs/java-client-1.0.0.jar \
+  serving-api-streaming.wxcc-us1.cisco.com \
+  443 \
+  YOUR_ACCESS_TOKEN
 
 # Including organization ID (optional - avoids being prompted later)
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 ${token} YOUR_ORG_ID"
-
-# Or run the JAR directly
 java -jar build/libs/java-client-1.0.0.jar \
   serving-api-streaming.wxcc-us1.cisco.com \
   443 \
@@ -961,76 +958,219 @@ java -jar build/libs/java-client-1.0.0.jar \
 - **Required for API calls** - The client will ask for it interactively if not provided
 - **Recommended to include** - Saves time by avoiding the prompt during interactive menu
 
-**Important:** When using shell variables, keep the entire `--args` value in quotes to prevent word splitting:
-```bash
-# ✅ Correct - entire args string in quotes
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 ${token}"
-
-# ✅ Correct - with org ID
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443 ${token} ${orgId}"
-
-# ❌ Wrong - token will be split into multiple arguments
-gradle run --args="serving-api-streaming.wxcc-us1.cisco.com 443" ${token}
-```
-
-**Note:** Running `gradle run` without arguments will fail because the client cannot read interactive input when run via Gradle. Always pass at least the server host, port, and access token as shown above.
-
 **Interactive Menu:**
 ```
-=== Streaming Insight Client ===
+=== Menu ===
 1. Start streaming insights
 2. Get one-time insights
-3. Streaming demo
-4. Exit
-
-Enter your choice:
+3. Get insights by interaction ID
+4. Streaming demo (with sample data)
+5. Exit
+Select an option (1-5):
 ```
 
-### Step 6: Start Streaming Insights
+**Understanding the Menu Options:**
 
-Select option 1 and provide the required information:
+- **Option 1 (Start streaming insights):** ✅ **RECOMMENDED** - Real-time streaming for **active/live calls**
+  - Connects to a live conversation and streams insights as they happen
+  - Works immediately - no indexing delay
+  - Works for both active calls and recently completed calls
+  - Best for: Live demos, real-time testing, active call monitoring, retrieving recent transcripts
+  
+- **Option 2 (Get one-time insights):** ⚠️ **EXPERIMENTAL** - Historical query for **completed calls**
+  - Retrieves insights from Elasticsearch cache
+  - **Note:** This feature may not be available in all environments
+  - Requires: Call must be completed and indexed (wait 5-10 minutes after call ends)
+  - May return `NOT_FOUND` errors even for valid conversation IDs
+  - Best for: Analyzing past conversations (when available)
+  
+- **Option 3 (Get insights by interaction ID):** ⚠️ **EXPERIMENTAL** - Historical query by specific interaction
+  - Same as Option 2, but uses interaction/message ID
+  - **Note:** This feature may not be available in all environments
+  - Requires: Call must be completed and indexed
+  - May return `NOT_FOUND` errors even for valid conversation IDs
+  - Best for: Retrieving specific message insights (when available)
+  
+- **Option 4 (Streaming demo):** Test with sample data
+  - No real conversation needed
+  - Best for: Testing client functionality without live calls
+
+**Important:** 
+- **Use Option 1 as a template for all production use cases** - it's the most reliable method
+- Options 2 and 3 may return `NOT_FOUND` errors because:
+  - The historical query API may not be enabled in your environment
+  - The call hasn't been indexed yet (wait 5-10 minutes after call ends)
+  - The conversation ID doesn't exist in your organization
+  - Transcripts weren't enabled for that call
+
+### Step 6: Start Streaming Insights (Option 1)
+
+Select option 1 from the menu for real-time streaming:
 
 ```
-Enter server host: serving-api-streaming.wxcc-us1.cisco.com
-Enter server port: 443
-Enter access token: eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
-Enter organization ID: 63b02f90-9cc6-43b8-aa6d-cad425ac554c
-Enter conversation ID: conv-12345-67890
-Enter agent ID: agent-001
-Enable real-time transcripts? (y/n): y
-Enable historical transcripts? (y/n): y
-Enable real-time agent assist? (y/n): y
+=== Start Streaming Insights ===
+Enter conversation ID: 3b0fbaa2-f41e-4c1a-80be-c40219caaecb
+Using organization ID from config: 05ba0660-6b05-48b0-9185-7343434c0784
+Enter agent ID: 3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13
+
+Select transcript options:
+1. Real-time transcripts only
+2. Historical transcripts only
+3. Both real-time and historical transcripts
+Select transcript option (1-3): 3
+Selected: Both real-time and historical transcripts
+
+Choose response handler:
+1. Console handler (detailed output)
+2. Transcript handler (transcripts only)
+3. JSON handler (raw JSON output)
+Select handler (1-3): 1
+
+Starting streaming insights...
+Press Enter to stop streaming
 ```
+
+**Getting the Conversation ID:**
+- **For live demos:** Accept a call in Agent Desktop, then copy the task ID from the browser URL
+  - Example URL: `https://desktop.wxcc-us1.cisco.com/task/8edb4746-5d80-436e-88ad-4d4981e6f405`
+  - The task ID in the URL path is the conversation ID (also called interaction ID)
+  - Format: `https://desktop.wxcc-us1.cisco.com/task/{CONVERSATION_ID}`
+- **For historical transcripts:** Use any past conversation ID from your call history or logs
+
+**Transcript Options:**
+- **Option 1 (Real-time only):** Receive only new transcripts as the conversation happens (requires active call)
+- **Option 2 (Historical only):** Retrieve past transcripts from the start of the conversation up to now
+- **Option 3 (Both):** ✅ **RECOMMENDED** - Get all historical transcripts first (to catch up on what was said), then continue streaming new real-time updates
+
+**Why use Option 3 (Both)?**
+- You can "look back" into the call to see what happened before you started streaming
+- Perfect for joining a call in progress - get the full context immediately
+- No need to worry about missing any part of the conversation
+- Historical transcripts are delivered first, followed by real-time updates
+
+**Response Handlers:**
+- **Console handler:** Detailed output with all insight fields (recommended for testing)
+- **Transcript handler:** Shows only transcript text (cleaner output)
+- **JSON handler:** Raw JSON format (useful for debugging or logging)
 
 **Expected Output:**
 ```
-[INFO] Connecting to serving-api-streaming.wxcc-us1.cisco.com:443
-[INFO] Starting streaming insights for conversation: conv-12345-67890
-[INFO] Subscription active, waiting for insights...
+2026-04-10 13:32:14.815 [main] INFO  c.c.w.c.c.StreamingInsightClient - Starting streaming insights for conversation 3b0fbaa2-f41e-4c1a-80be-c40219caaecb in org 05ba0660-6b05-48b0-9185-7343434c0784
 
-=== INSIGHT RECEIVED ===
-Conversation ID: conv-12345-67890
+=== New Insight Received ===
+Conversation ID: 3b0fbaa2-f41e-4c1a-80be-c40219caaecb
+Role: AGENT
+Insight Type: TRANSCRIPTION
+Provider: CISCO
+Is Final: false
+Publish Timestamp: 1775853139617
+Transcription Result:
+  Is Final: false
+  Language: en-US
+  Transcript: Hello
+  Confidence: 0.00
+===============================
+
+=== New Insight Received ===
+Conversation ID: 3b0fbaa2-f41e-4c1a-80be-c40219caaecb
+Role: AGENT
+Insight Type: TRANSCRIPTION
+Provider: CISCO
+Is Final: false
+Publish Timestamp: 1775853140261
+Transcription Result:
+  Is Final: false
+  Language: en-US
+  Transcript: Hello.
+  Confidence: 0.00
+===============================
+
+=== New Insight Received ===
+Conversation ID: a669d727-f9d8-4481-a953-7d2c799970c5
 Role: CALLER
 Insight Type: TRANSCRIPTION
-Is Final: false
-Timestamp: 2026-03-02T12:34:56Z
-Content: Hello, I need help with my account
+Provider: CISCO
+Is Final: true
+Publish Timestamp: 1775860259519
+Transcription Result:
+  Is Final: true
+  Language: en-US
+  Transcript: Yes, I have questions about my account.
+  Confidence: 0.00
+===============================
 
-=== INSIGHT RECEIVED ===
-Conversation ID: conv-12345-67890
-Role: AGENT
-Insight Type: TRANSCRIPTION
-Is Final: false
-Timestamp: 2026-03-02T12:35:01Z
-Content: I'd be happy to help you with that
-
-=== INSIGHT RECEIVED ===
-Conversation ID: conv-12345-67890
-Role: AGENT
-Insight Type: AGENT_ANSWERS
-Timestamp: 2026-03-02T12:35:02Z
-Suggestion: Check knowledge base article KB-1234 for account issues
+Stopping streaming insights...
 ```
+
+**Notes:**
+- Press `Enter` at any time to stop streaming
+- `Is Final: false` indicates interim transcription results
+- `Is Final: true` indicates final transcription results
+- You'll see multiple interim results as the speech recognition refines the transcript
+
+### Step 7: Get Historical Insights (Options 2 & 3) - EXPERIMENTAL
+
+⚠️ **Warning:** These options are **experimental** and may not work in all environments. The historical query API (`InsightServing`) may not be enabled or may require specific Elasticsearch configuration.
+
+**Recommendation:** Use **Option 1 (streaming)** instead, which works reliably for both active and recently completed calls.
+
+#### Option 2: Get One-Time Insights
+
+For retrieving insights from a completed conversation (if available in your environment):
+
+```
+Select an option (1-5): 2
+
+=== Get One-Time Insights ===
+Enter conversation ID: a669d727-f9d8-4481-a953-7d2c799970c5
+Using organization ID from config: 05ba0660-6b05-48b0-9185-7343434c0784
+Select insight type:
+1. Transcription
+2. Agent Answers
+3. Virtual Agent
+4. Messages
+Select type (1-4): 1
+
+Fetching insights...
+```
+
+#### Option 3: Get Insights by Interaction ID
+
+Same as Option 2, but allows specifying a specific interaction/message ID:
+
+```
+Select an option (1-5): 3
+
+=== Get Insights by Interaction ID ===
+Enter interaction ID (conversation/message ID): a669d727-f9d8-4481-a953-7d2c799970c5
+Using organization ID from config: 05ba0660-6b05-48b0-9185-7343434c0784
+Select insight type:
+1. Transcription
+2. Agent Answers
+3. Virtual Agent
+4. Messages
+Select type (1-4): 1
+
+Fetching insights for interaction ID...
+```
+
+#### Common Error (Expected)
+
+**Most users will see this error:**
+```
+Error: NOT_FOUND: Summary - a669d727-f9d8-4481-a953-7d2c799970c5 : No matching records found. CurrentCallConversationID: a669d727-f9d8-4481-a953-7d2c799970c5 in the ES cache
+```
+
+**Why this happens:**
+- The historical query API may not be enabled in your environment
+- Elasticsearch indexing may not be configured for your organization
+- The call hasn't been indexed yet (requires 5-10 minutes after call completion)
+- The conversation ID doesn't exist in your organization
+- Transcripts weren't enabled for that call
+
+**Solution:** 
+- ✅ **Use Option 1 (streaming)** for all use cases - it works for both active and recently completed calls
+- ❌ Avoid Options 2 & 3 unless you've confirmed the historical query API is available in your environment
 
 ---
 
@@ -1090,36 +1230,41 @@ Before running the application, generate Java classes from `.proto` files:
 2. Click the **+** button and select **Application**
 3. Configure as follows:
    - **Name:** `Serving API Client`
-   - **Main class:** `com.cisco.wcc.ccai.client.StreamingInsightClient`
+   - **Main class:** `com.cisco.wcc.ccai.client.StreamingInsightClientMain`
    - **JRE:** Select Java 17
    - **VM options:** `-Xmx512m` (optional, for memory allocation)
    - **Working directory:** `$MODULE_WORKING_DIR$` (or leave as default)
    - **Use classpath of module:** `java-client.main`
    - **Program arguments:** 
      ```
-     serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN YOUR_ORG_ID YOUR_CONVERSATION_ID
+     serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN
      ```
-     > Replace with your actual values
+     > Replace `YOUR_ACCESS_TOKEN` with your actual access token
+     > 
+     > Optionally add `YOUR_ORG_ID` as a 4th argument to avoid being prompted
 4. Click **Apply** and **OK**
 
 ### Running in IntelliJ
 
 1. Click the green **Run** button (▶️) in the toolbar (or press `Ctrl + R` on Mac / `Shift + F10` on Windows/Linux)
-2. The client will connect to the Serving API
+2. The client will start and display the interactive menu
 3. Expected console output:
    ```
-   INFO: Connecting to serving-api-streaming.wxcc-us1.cisco.com:443
-   INFO: Starting streaming insight request...
-   INFO: Connected successfully
-   INFO: Receiving insights...
+   === Webex Contact Center AI Streaming Insight Client ===
+   Connecting to: serving-api-streaming.wxcc-us1.cisco.com:443
+   With token eyJhbGci...
+   Organization ID: <your-org-id or null>
+   
+   === Menu ===
+   1. Start streaming insights
+   2. Get one-time insights
+   3. Get insights by interaction ID
+   4. Streaming demo (with sample data)
+   5. Exit
+   Select an option (1-5):
    ```
 
-4. **Test with Interactive CLI:**
-   - Set program arguments to just the server and port:
-     ```
-     serving-api-streaming.wxcc-us1.cisco.com 443
-     ```
-   - The client will prompt for access token, org ID, and conversation ID interactively
+4. Select an option from the menu to start using the client
 
 ### Debug Mode
 
@@ -2105,3 +2250,4 @@ cjp:organization
 **Document Version:** 1.0  
 **Last Updated:** April 7, 2026  
 **Feedback:** Please report issues or suggestions via GitHub issues
+n 

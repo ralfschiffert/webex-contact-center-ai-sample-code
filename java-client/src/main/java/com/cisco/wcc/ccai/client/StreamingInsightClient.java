@@ -203,6 +203,7 @@ public class StreamingInsightClient implements AutoCloseable {
     
     /**
      * Get insights (one-time request, not streaming)
+     * Note: For the API to work, messageId must be provided. Typically use the conversationId as the messageId.
      * @param conversationId Conversation ID
      * @param orgId Organization ID
      * @param insightType Type of insight to retrieve
@@ -216,6 +217,7 @@ public class StreamingInsightClient implements AutoCloseable {
         
         InsightsServingRequest request = InsightsServingRequest.newBuilder()
             .setConversationId(conversationId)
+            .setMessageId(conversationId)  // Use conversationId as messageId
             .setOrgId(orgId)
             .setInsightType(insightType)
             .build();
