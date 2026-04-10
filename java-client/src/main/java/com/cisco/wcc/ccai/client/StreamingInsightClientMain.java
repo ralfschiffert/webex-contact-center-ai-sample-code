@@ -16,11 +16,11 @@ public class StreamingInsightClientMain {
     
     public static void main(String[] args) {
         // Parse command line arguments or use defaults
-        // token  orgId  server  port
-        String accessToken = getArgOrDefault(args, 0, null);
-        String orgId = getArgOrDefault(args, 1, null);
-        String serverHost = getArgOrDefault(args, 2, "serving-api-streaming.wxcc-us1.cisco.com");
-        int serverPort = Integer.parseInt(getArgOrDefault(args, 3, "443"));
+        // Order: server  port  token  orgId (optional)
+        String serverHost = getArgOrDefault(args, 0, "serving-api-streaming.wxcc-us1.cisco.com");
+        int serverPort = Integer.parseInt(getArgOrDefault(args, 1, "443"));
+        String accessToken = getArgOrDefault(args, 2, null);
+        String orgId = getArgOrDefault(args, 3, null);
         
         
         System.out.println("=== Webex Contact Center AI Streaming Insight Client ===");
@@ -380,15 +380,15 @@ public class StreamingInsightClientMain {
     }
     
     private static void printUsage() {
-        System.out.println("Usage: java -jar streaming-insight-client.jar [access_token] [orgId] [host] [port]");
-        System.out.println("  access_token: Bearer token for authentication (optional)");
-        System.out.println("  orgId: Organization ID (optional - if provided, will be used for all requests)");
+        System.out.println("Usage: java -jar streaming-insight-client.jar [host] [port] [access_token] [orgId]");
         System.out.println("  host: Server hostname (default: serving-api-streaming.wxcc-us1.cisco.com)");
         System.out.println("  port: Server port (default: 443)");
+        System.out.println("  access_token: Bearer token for authentication (optional)");
+        System.out.println("  orgId: Organization ID (optional - if provided, will be used for all requests)");
         System.out.println();
         System.out.println("Examples:");
-        System.out.println("  java -jar streaming-insight-client.jar your-token-here");
-        System.out.println("  java -jar streaming-insight-client.jar your-token-here your-org-id");
-        System.out.println("  java -jar streaming-insight-client.jar your-token-here your-org-id api.wxcc.ai 443");
+        System.out.println("  java -jar streaming-insight-client.jar serving-api-streaming.wxcc-us1.cisco.com 443 your-token-here");
+        System.out.println("  java -jar streaming-insight-client.jar serving-api-streaming.wxcc-us1.cisco.com 443 your-token-here your-org-id");
+        System.out.println("  java -jar streaming-insight-client.jar api.wxcc.ai 443 your-token-here");
     }
 }
