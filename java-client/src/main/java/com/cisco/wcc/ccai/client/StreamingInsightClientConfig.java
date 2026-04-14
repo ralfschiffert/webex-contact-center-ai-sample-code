@@ -10,6 +10,7 @@ public class StreamingInsightClientConfig {
     private final boolean useTls;
     private final String accessToken;
     private final String orgId;
+    private final String agentId;
     private final long maxInboundMessageSize;
     private final long keepAliveTimeoutMs;
     private final long keepAliveIntervalMs;
@@ -20,6 +21,7 @@ public class StreamingInsightClientConfig {
         this.useTls = builder.useTls;
         this.accessToken = builder.accessToken;
         this.orgId = builder.orgId;
+        this.agentId = builder.agentId;
         this.maxInboundMessageSize = builder.maxInboundMessageSize;
         this.keepAliveTimeoutMs = builder.keepAliveTimeoutMs;
         this.keepAliveIntervalMs = builder.keepAliveIntervalMs;
@@ -30,6 +32,7 @@ public class StreamingInsightClientConfig {
     public boolean isUseTls() { return useTls; }
     public String getAccessToken() { return accessToken; }
     public String getOrgId() { return orgId; }
+    public String getAgentId() { return agentId; }
     public long getMaxInboundMessageSize() { return maxInboundMessageSize; }
     public long getKeepAliveTimeoutMs() { return keepAliveTimeoutMs; }
     public long getKeepAliveIntervalMs() { return keepAliveIntervalMs; }
@@ -44,6 +47,7 @@ public class StreamingInsightClientConfig {
         private boolean useTls = false;
         private String accessToken;
         private String orgId;
+        private String agentId;
         private long maxInboundMessageSize = 4 * 1024 * 1024; // 4MB
         private long keepAliveTimeoutMs = 30000; // 30 seconds
         private long keepAliveIntervalMs = 10000; // 10 seconds
@@ -70,6 +74,11 @@ public class StreamingInsightClientConfig {
         
         public Builder setOrgId(String orgId) {
             this.orgId = orgId;
+            return this;
+        }
+        
+        public Builder setAgentId(String agentId) {
+            this.agentId = agentId;
             return this;
         }
         

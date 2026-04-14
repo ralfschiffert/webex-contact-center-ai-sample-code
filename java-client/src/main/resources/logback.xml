@@ -11,7 +11,7 @@
     <!-- File appender -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>logs/streaming-insight-client.log</file>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>logs/streaming-insight-client.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
             <maxFileSize>10MB</maxFileSize>
             <maxHistory>30</maxHistory>
@@ -22,12 +22,21 @@
         </encoder>
     </appender>
     
-    <!-- Specific logger for gRPC -->
-    <logger name="io.grpc" level="INFO"/>
-    <logger name="io.netty" level="INFO"/>
+    <!-- Specific logger for gRPC internals -->
+    <logger name="io.grpc" level="WARN"/>
+    <logger name="io.netty" level="WARN"/>
     
     <!-- Application logger -->
     <logger name="com.cisco.wcc.ccai.client" level="DEBUG"/>
+    
+    <!-- 
+        gRPC protocol exchange logger — writes to log file only (not console).
+        Set to INFO to see client-server message exchange (requests, responses, status).
+        Set to OFF to disable protocol logging.
+    -->
+    <logger name="com.cisco.wcc.ccai.client.protocol" level="INFO" additivity="false">
+        <appender-ref ref="FILE"/>
+    </logger>
     
     <!-- Root logger -->
     <root level="INFO">

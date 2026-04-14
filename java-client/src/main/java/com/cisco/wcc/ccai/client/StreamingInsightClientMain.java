@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 /**
  * Main class demonstrating usage of the StreamingInsightClient
@@ -13,20 +14,43 @@ import java.util.concurrent.TimeUnit;
 public class StreamingInsightClientMain {
     
     private static final Logger logger = LoggerFactory.getLogger(StreamingInsightClientMain.class);
+    private static final Pattern UUID_PATTERN = Pattern.compile(
+            "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
     
     public static void main(String[] args) {
-        // Parse command line arguments or use defaults
-        // Order: server  port  token  orgId (optional)
-        String serverHost = getArgOrDefault(args, 0, "serving-api-streaming.wxcc-us1.cisco.com");
-        int serverPort = Integer.parseInt(getArgOrDefault(args, 1, "443"));
-        String accessToken = getArgOrDefault(args, 2, null);
-        String orgId = getArgOrDefault(args, 3, null);
+        if (args.length < 5) {
+            printUsage();
+            System.exit(1);
+        }
         
+        // Parse command line arguments
+        // Order: host  port  token  orgId  agentId
+        String serverHost = args[0];
+        int serverPort = Integer.parseInt(args[1]);
+        String accessToken = args[2];
+        String orgId = args[3];
+        String agentId = args[4];
+        
+        // Validate UUIDs — catch argument order mistakes early
+        if (!isValidUuid(orgId)) {
+            System.err.println("\n⚠️  ERROR: Organization ID does not look like a UUID: " + truncate(orgId, 40));
+            System.err.println("   Expected format: 05ba0660-6b05-48b0-9185-7343434c0784");
+            System.err.println("   Argument order: host port token orgId agentId");
+            System.err.println("   Tip: Make sure there are no spaces after \\ in line continuations\n");
+            System.exit(1);
+        }
+        if (!isValidUuid(agentId)) {
+            System.err.println("\n⚠️  ERROR: Agent ID does not look like a UUID: " + truncate(agentId, 40));
+            System.err.println("   Expected format: 3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13");
+            System.err.println("   Argument order: host port token orgId agentId\n");
+            System.exit(1);
+        }
         
         System.out.println("=== Webex Contact Center AI Streaming Insight Client ===");
         System.out.printf("Connecting to: %s:%d%n", serverHost, serverPort);
-        System.out.printf("With token %s%n", accessToken);
+        System.out.printf("With token: %s%n", truncate(accessToken, 20));
         System.out.printf("Organization ID: %s%n", orgId);
+        System.out.printf("Agent ID: %s%n", agentId);
         
         // Create client configuration
         StreamingInsightClientConfig config = StreamingInsightClientConfig.newBuilder()
@@ -35,6 +59,7 @@ public class StreamingInsightClientMain {
                 .setUseTls(serverPort == 443) // Use TLS for standard HTTPS port
                 .setAccessToken(accessToken)
                 .setOrgId(orgId)
+                .setAgentId(agentId)
                 .build();
         
         try (StreamingInsightClient client = new StreamingInsightClient(config)) {
@@ -91,20 +116,13 @@ public class StreamingInsightClientMain {
         System.out.print("Enter conversation ID: ");
         String conversationId = scanner.nextLine().trim();
         
-        String orgId;
-        if (config.getOrgId() != null && !config.getOrgId().isEmpty()) {
-            orgId = config.getOrgId();
-            System.out.printf("Using organization ID from config: %s%n", orgId);
-        } else {
-            System.out.print("Enter organization ID: ");
-            orgId = scanner.nextLine().trim();
-        }
+        String orgId = config.getOrgId();
+        String agentId = config.getAgentId();
+        System.out.printf("Organization ID: %s%n", orgId);
+        System.out.printf("Agent ID: %s%n", agentId);
         
-        System.out.print("Enter agent ID: ");
-        String agentId = scanner.nextLine().trim();
-        
-        if (conversationId.isEmpty() || orgId.isEmpty() || agentId.isEmpty()) {
-            System.out.println("All fields are required!");
+        if (conversationId.isEmpty()) {
+            System.out.println("Conversation ID is required!");
             return;
         }
         
@@ -196,17 +214,11 @@ public class StreamingInsightClientMain {
         System.out.print("Enter conversation ID: ");
         String conversationId = scanner.nextLine().trim();
         
-        String orgId;
-        if (config.getOrgId() != null && !config.getOrgId().isEmpty()) {
-            orgId = config.getOrgId();
-            System.out.printf("Using organization ID from config: %s%n", orgId);
-        } else {
-            System.out.print("Enter organization ID: ");
-            orgId = scanner.nextLine().trim();
-        }
+        String orgId = config.getOrgId();
+        System.out.printf("Organization ID: %s%n", orgId);
         
-        if (conversationId.isEmpty() || orgId.isEmpty()) {
-            System.out.println("Conversation ID and Organization ID are required!");
+        if (conversationId.isEmpty()) {
+            System.out.println("Conversation ID is required!");
             return;
         }
         
@@ -264,17 +276,11 @@ public class StreamingInsightClientMain {
         System.out.print("Enter interaction ID (conversation/message ID): ");
         String interactionId = scanner.nextLine().trim();
         
-        String orgId;
-        if (config.getOrgId() != null && !config.getOrgId().isEmpty()) {
-            orgId = config.getOrgId();
-            System.out.printf("Using organization ID from config: %s%n", orgId);
-        } else {
-            System.out.print("Enter organization ID: ");
-            orgId = scanner.nextLine().trim();
-        }
+        String orgId = config.getOrgId();
+        System.out.printf("Organization ID: %s%n", orgId);
         
-        if (interactionId.isEmpty() || orgId.isEmpty()) {
-            System.out.println("Interaction ID and Organization ID are both required!");
+        if (interactionId.isEmpty()) {
+            System.out.println("Interaction ID is required!");
             return;
         }
         
@@ -334,14 +340,11 @@ public class StreamingInsightClientMain {
         System.out.println("Press Enter to stop the demo\n");
         
         String demoConversationId = "demo-conversation-" + System.currentTimeMillis();
-        String demoOrgId = (config.getOrgId() != null && !config.getOrgId().isEmpty()) ? config.getOrgId() : "demo-org-123";
-        String demoAgentId = "demo-agent-456";
+        String demoOrgId = config.getOrgId();
+        String demoAgentId = config.getAgentId();
         
-        if (config.getOrgId() != null && !config.getOrgId().isEmpty()) {
-            System.out.printf("Using organization ID from config: %s%n", demoOrgId);
-        } else {
-            System.out.printf("Using demo organization ID: %s%n", demoOrgId);
-        }
+        System.out.printf("Organization ID: %s%n", demoOrgId);
+        System.out.printf("Agent ID: %s%n", demoAgentId);
         
         try {
             StreamingInsightClient.StreamingInsightSession session = client.startStreamingInsights(
@@ -375,20 +378,35 @@ public class StreamingInsightClientMain {
         }
     }
     
+    private static boolean isValidUuid(String value) {
+        return value != null && UUID_PATTERN.matcher(value.trim()).matches();
+    }
+    
+    private static String truncate(String value, int maxLength) {
+        if (value == null) return "(not set)";
+        if (value.length() <= maxLength) return value;
+        return value.substring(0, maxLength) + "...";
+    }
+    
     private static String getArgOrDefault(String[] args, int index, String defaultValue) {
         return args.length > index ? args[index] : defaultValue;
     }
     
     private static void printUsage() {
-        System.out.println("Usage: java -jar streaming-insight-client.jar [host] [port] [access_token] [orgId]");
-        System.out.println("  host: Server hostname (default: serving-api-streaming.wxcc-us1.cisco.com)");
-        System.out.println("  port: Server port (default: 443)");
-        System.out.println("  access_token: Bearer token for authentication (optional)");
-        System.out.println("  orgId: Organization ID (optional - if provided, will be used for all requests)");
+        System.out.println("Usage: java -jar streaming-insight-client.jar <host> <port> <access_token> <orgId> <agentId>");
         System.out.println();
-        System.out.println("Examples:");
-        System.out.println("  java -jar streaming-insight-client.jar serving-api-streaming.wxcc-us1.cisco.com 443 your-token-here");
-        System.out.println("  java -jar streaming-insight-client.jar serving-api-streaming.wxcc-us1.cisco.com 443 your-token-here your-org-id");
-        System.out.println("  java -jar streaming-insight-client.jar api.wxcc.ai 443 your-token-here");
+        System.out.println("  host:          Server hostname (e.g., serving-api-streaming.wxcc-us1.cisco.com)");
+        System.out.println("  port:          Server port (443 for TLS)");
+        System.out.println("  access_token:  Agent access token (JWT)");
+        System.out.println("  orgId:         Organization ID (UUID from Control Hub)");
+        System.out.println("  agentId:       Agent ID (UUID)");
+        System.out.println();
+        System.out.println("Example:");
+        System.out.println("  java -jar streaming-insight-client.jar \\");
+        System.out.println("    serving-api-streaming.wxcc-us1.cisco.com \\");
+        System.out.println("    443 \\");
+        System.out.println("    eyJhbGci... \\");
+        System.out.println("    05ba0660-6b05-48b0-9185-7343434c0784 \\");
+        System.out.println("    3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13");
     }
 }

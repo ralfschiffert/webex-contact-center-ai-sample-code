@@ -827,8 +827,6 @@ Follow these steps to enable Real-Time Transcripts in your flow:
 For detailed screenshots and step-by-step instructions, see the official Webex help article:
 **[Enable real-time transcripts for agents](https://help.webex.com/en-us/article/n9kuqlh/Enable-real-time-transcripts-for-agents)**
 
-<!-- TODO: Add screenshot of Flow Designer with Start Media Stream activity in Event Flows -->
-
 ### Verification
 
 After enabling RTT in your flow:
@@ -882,7 +880,8 @@ java-client/
 │   ├── StreamingInsightClient.java          # Main client implementation
 │   ├── StreamingInsightClientConfig.java    # Configuration builder
 │   ├── StreamingInsightClientMain.java      # Interactive CLI
-│   └── ResponseHandler.java                 # Response processing utilities
+│   ├── ResponseHandler.java                 # Response processing utilities
+│   └── GrpcProtocolInterceptor.java         # gRPC protocol exchange logger
 ├── src/main/resources/
 │   └── logback.xml                          # Logging configuration
 └── README.md                                # Detailed documentation
@@ -893,6 +892,7 @@ java-client/
 - **StreamingInsightClientConfig.java:** Configuration for server, auth, and connection tuning
 - **ResponseHandler.java:** Pre-built handlers for console, JSON, and transcript output
 - **StreamingInsightClientMain.java:** Interactive CLI for testing
+- **GrpcProtocolInterceptor.java:** Logs gRPC request/response exchange at INFO level for debugging (configurable on/off via `logback.xml`)
 
 ### Step 3: Build the Client
 
@@ -930,33 +930,27 @@ Before running the client, collect:
 
 ### Step 5: Run the Client
 
-The client accepts command-line arguments in this order: **server host, port, access token, organization ID (optional)**
+The client requires **5 command-line arguments** in this order: **host, port, token, orgId, agentId**
 
 ```bash
-# Run the JAR with required arguments
-java -jar build/libs/java-client-1.0.0.jar \
-  serving-api-streaming.wxcc-us1.cisco.com \
-  443 \
-  YOUR_ACCESS_TOKEN
-
-# Including organization ID (optional - avoids being prompted later)
 java -jar build/libs/java-client-1.0.0.jar \
   serving-api-streaming.wxcc-us1.cisco.com \
   443 \
   YOUR_ACCESS_TOKEN \
-  YOUR_ORG_ID
+  YOUR_ORG_ID \
+  YOUR_AGENT_ID
 ```
 
-**Argument Order:**
+**Argument Order (all required):**
 1. **Server host** - Your data center endpoint (e.g., `serving-api-streaming.wxcc-us1.cisco.com`)
 2. **Port** - Always `443` for TLS connections
 3. **Access token** - Your agent access token (JWT)
-4. **Organization ID** - Your Control Hub org UUID (optional - if not provided, you'll be prompted)
+4. **Organization ID** - Your Control Hub org UUID
+5. **Agent ID** - Your agent UUID
 
-**About Organization ID:**
-- **Optional as command-line argument** - You can provide it later when prompted
-- **Required for API calls** - The client will ask for it interactively if not provided
-- **Recommended to include** - Saves time by avoiding the prompt during interactive menu
+> **Tip:** Make sure there are **no spaces after `\`** in line continuations. A trailing space breaks the continuation and shifts your arguments, causing the token to be interpreted as the orgId.
+
+The client validates that orgId and agentId are valid UUIDs at startup. If an argument is in the wrong position, you'll see a clear error message.
 
 **Interactive Menu:**
 ```
@@ -1010,8 +1004,8 @@ Select option 1 from the menu for real-time streaming:
 ```
 === Start Streaming Insights ===
 Enter conversation ID: 3b0fbaa2-f41e-4c1a-80be-c40219caaecb
-Using organization ID from config: 05ba0660-6b05-48b0-9185-7343434c0784
-Enter agent ID: 3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13
+Organization ID: 05ba0660-6b05-48b0-9185-7343434c0784
+Agent ID: 3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13
 
 Select transcript options:
 1. Real-time transcripts only
@@ -1108,6 +1102,45 @@ Stopping streaming insights...
 - `Is Final: true` indicates final transcription results
 - You'll see multiple interim results as the speech recognition refines the transcript
 
+### Protocol Exchange Logging
+
+The client includes a gRPC protocol logger that records the message exchange between client and server. This is useful for debugging connectivity or understanding the API flow. Protocol logs are written **to the log file only** (not the console) to keep terminal output clean.
+
+**Log file location:** `logs/streaming-insight-client.log` (created in the directory where you run the JAR)
+
+**Inspecting protocol logs:**
+```bash
+# Follow the log file in real-time (run in a separate terminal)
+tail -f logs/streaming-insight-client.log
+
+# Show only gRPC protocol lines
+grep "gRPC" logs/streaming-insight-client.log
+```
+
+**Example log output:**
+```
+[gRPC CALL] --> com.cisco.wcc.ccai.v1.AiInsight/StreamingInsightServing (type: SERVER_STREAMING)
+[gRPC REQUEST] --> ...| StreamingInsightServingRequest | conversationId=3b0fb...
+[gRPC RESPONSE] <-- ...| StreamingInsightServingResponse | conversationId=3b0fb..., role=CALLER, type=TRANSCRIPTION, isFinal=false
+[gRPC RESPONSE] <-- ...| StreamingInsightServingResponse | conversationId=3b0fb..., role=AGENT, type=TRANSCRIPTION, isFinal=true
+[gRPC CLOSE] <-- ... completed OK
+```
+
+**To turn protocol logging on or off**, edit `src/main/resources/logback.xml`:
+```xml
+<!-- ON (default): log all gRPC message exchange to file -->
+<logger name="com.cisco.wcc.ccai.client.protocol" level="INFO" additivity="false">
+    <appender-ref ref="FILE"/>
+</logger>
+
+<!-- OFF: disable protocol logging -->
+<logger name="com.cisco.wcc.ccai.client.protocol" level="OFF" additivity="false">
+    <appender-ref ref="FILE"/>
+</logger>
+```
+
+**Note:** After changing `logback.xml`, rebuild with `gradle clean build` for changes to take effect in the JAR. If running from IntelliJ, changes take effect immediately on restart.
+
 ### Step 7: Get Historical Insights (Options 2 & 3) - EXPERIMENTAL
 
 ⚠️ **Warning:** These options are **experimental** and may not work in all environments. The historical query API (`InsightServing`) may not be enabled or may require specific Elasticsearch configuration.
@@ -1190,7 +1223,7 @@ For active development, IntelliJ IDEA provides a powerful environment for workin
 2. **Select Open** from the welcome screen (or File → Open)
 3. **Navigate to and select the Java client directory**:
    ```
-   <REPO_ROOT>/serving-api/java-client
+   <REPO_ROOT>/java-client
    ```
    > **IMPORTANT:** Make sure to select the `java-client` directory, not the root repository directory
 
@@ -1237,11 +1270,9 @@ Before running the application, generate Java classes from `.proto` files:
    - **Use classpath of module:** `java-client.main`
    - **Program arguments:** 
      ```
-     serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN
+     serving-api-streaming.wxcc-us1.cisco.com 443 YOUR_ACCESS_TOKEN YOUR_ORG_ID YOUR_AGENT_ID
      ```
-     > Replace `YOUR_ACCESS_TOKEN` with your actual access token
-     > 
-     > Optionally add `YOUR_ORG_ID` as a 4th argument to avoid being prompted
+     > Replace the placeholders with your actual values (all 5 arguments are required)
 4. Click **Apply** and **OK**
 
 ### Running in IntelliJ
@@ -1252,8 +1283,9 @@ Before running the application, generate Java classes from `.proto` files:
    ```
    === Webex Contact Center AI Streaming Insight Client ===
    Connecting to: serving-api-streaming.wxcc-us1.cisco.com:443
-   With token eyJhbGci...
-   Organization ID: <your-org-id or null>
+   With token: eyJhbGciOiJSUzI1Ni...
+   Organization ID: 05ba0660-6b05-48b0-9185-7343434c0784
+   Agent ID: 3666b2a0-9fa9-4d8e-a1c0-87350d4a2c13
    
    === Menu ===
    1. Start streaming insights
@@ -2250,4 +2282,3 @@ cjp:organization
 **Document Version:** 1.0  
 **Last Updated:** April 7, 2026  
 **Feedback:** Please report issues or suggestions via GitHub issues
-n 

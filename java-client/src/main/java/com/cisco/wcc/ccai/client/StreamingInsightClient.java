@@ -50,7 +50,8 @@ public class StreamingInsightClient implements AutoCloseable {
             .maxInboundMessageSize((int) config.getMaxInboundMessageSize())
             .keepAliveTime(config.getKeepAliveIntervalMs(), TimeUnit.MILLISECONDS)
             .keepAliveTimeout(config.getKeepAliveTimeoutMs(), TimeUnit.MILLISECONDS)
-            .keepAliveWithoutCalls(true);
+            .keepAliveWithoutCalls(true)
+            .intercept(new GrpcProtocolInterceptor());
             
         if (config.isUseTls()) {
             channelBuilder.useTransportSecurity();
